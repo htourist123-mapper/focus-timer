@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>나의 집중 타이머</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0e0f;
+  --bg2: #161618;
+  --bg3: #1e1e21;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #f0efe8;
+  --text2: #888884;
+  --text3: #555552;
+  --accent: #c8f060;
+  --accent2: #a8d040;
+  --accent-dim: rgba(200,240,96,0.12);
+  --accent-dim2: rgba(200,240,96,0.06);
+  --red: #ff6b6b;
+  --orange: #ffaa44;
+  --blue: #6eb5ff;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --mono: 'DM Mono', monospace;
+  --serif: 'Instrument Serif', serif;
+  --sans: 'DM Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; }
+
+/* Layout */
+.app { display: flex; height: 100vh; overflow: hidden; }
+.sidebar {
+  width: 220px; flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 0.5px solid var(--border);
+  display: flex; flex-direction: column;
+  padding: 20px 0;
+}
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* Sidebar */
+.logo {
+  padding: 0 20px 20px;
+  border-bottom: 0.5px solid var(--border);
+  margin-bottom: 16px;
+}
+.logo-text { font-family: var(--serif); font-size: 20px; color: var(--text); font-style: italic; }
+.logo-sub { font-size: 11px; color: var(--text3); letter-spacing: .06em; margin-top: 2px; }
+
+.nav-section { padding: 0 12px; margin-bottom: 20px; }
+.nav-label { font-size: 10px; color: var(--text3); letter-spacing: .1em; text-transform: uppercase; padding: 0 8px; margin-bottom: 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 13px; color: var(--text2);
+  transition: all .15s;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { background: var(--accent-dim); color: var(--accent); }
+.nav-icon { font-size: 14px; width: 18px; text-align: center; }
+
+.session-list { flex: 1; overflow-y: auto; padding: 0 12px; }
+.session-list::-webkit-scrollbar { width: 4px; }
+.session-list::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+.session-item {
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  cursor: pointer; margin-bottom: 2px;
+}
+.session-item:hover { background: var(--bg3); }
+.session-item.active { background: var(--accent-dim2); }
+.session-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+.sidebar-bottom { padding: 16px 12px 0; border-top: 0.5px solid var(--border); }
+.new-session-btn {
+  width: 100%; padding: 8px; border-radius: var(--radius-sm);
+  background: var(--accent-dim); color: var(--accent);
+  border: 0.5px solid rgba(200,240,96,0.2);
+  font-size: 12px; font-family: var(--sans);
+  cursor: pointer; transition: all .15s;
+}
+.new-session-btn:hover { background: rgba(200,240,96,0.2); }
+
+/* Main - Timer View */
+.view { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.view.active { display: flex; }
+
+.top-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 24px;
+  border-bottom: 0.5px solid var(--border);
+  flex-shrink: 0;
+}
+.session-title-edit {
+  font-size: 15px; font-weight: 500; background: transparent;
+  border: none; color: var(--text); font-family: var(--sans);
+  outline: none; min-width: 100px;
+}
+.session-title-edit:focus { color: var(--accent); }
+.top-actions { display: flex; gap: 8px; }
+.top-btn {
+  padding: 6px 14px; border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border2);
+  background: transparent; color: var(--text2);
+  font-size: 12px; font-family: var(--sans);
+  cursor: pointer; transition: all .15s;
+}
+.top-btn:hover { border-color: var(--border2); background: var(--bg3); color: var(--text); }
+.top-btn.primary { background: var(--accent-dim); color: var(--accent); border-color: rgba(200,240,96,0.2); }
+.top-btn.primary:hover { background: rgba(200,240,96,0.2); }
+
+/* Timer Area */
+.timer-area {
+  flex-shrink: 0;
+  padding: 32px 24px 24px;
+  border-bottom: 0.5px solid var(--border);
+}
+.mode-tabs { display: flex; gap: 4px; margin-bottom: 28px; }
+.mode-tab {
+  padding: 5px 14px; border-radius: 20px; font-size: 12px;
+  cursor: pointer; color: var(--text3); transition: all .15s;
+  border: 0.5px solid transparent;
+}
+.mode-tab:hover { color: var(--text2); }
+.mode-tab.active { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+
+.timer-display-wrap { text-align: center; margin-bottom: 24px; }
+.timer-big {
+  font-family: var(--mono); font-size: 80px; font-weight: 300;
+  letter-spacing: -2px; color: var(--text);
+  line-height: 1; transition: color .3s;
+}
+.timer-big.running { color: var(--accent); }
+.timer-big.finished { color: var(--orange); }
+.timer-context {
+  font-size: 12px; color: var(--text3); margin-top: 8px;
+  letter-spacing: .04em; min-height: 18px;
+}
+
+/* Interval progress dots */
+.interval-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 16px; flex-wrap: wrap; }
+.dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; font-family: var(--mono); font-weight: 500;
+  border: 0.5px solid var(--border2); color: var(--text3);
+  transition: all .3s;
+}
+.dot.done { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.dot.active { background: var(--bg3); border-color: var(--accent); color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+.dot.todo { background: var(--bg2); }
+
+/* Timer controls */
+.timer-controls { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.ctrl-btn {
+  padding: 10px 28px; border-radius: var(--radius);
+  font-size: 14px; font-weight: 500; font-family: var(--sans);
+  cursor: pointer; transition: all .15s; border: none;
+}
+.ctrl-btn.start { background: var(--accent); color: var(--bg); }
+.ctrl-btn.start:hover { background: var(--accent2); }
+.ctrl-btn.pause { background: var(--bg3); color: var(--text); border: 0.5px solid var(--border2); }
+.ctrl-btn.pause:hover { background: var(--border2); }
+.ctrl-btn.reset { background: transparent; color: var(--text3); border: 0.5px solid var(--border); padding: 10px 18px; }
+.ctrl-btn.reset:hover { color: var(--text2); border-color: var(--border2); }
+.ctrl-btn.skip { background: transparent; color: var(--text3); border: 0.5px solid var(--border); padding: 10px 18px; }
+.ctrl-btn.skip:hover { color: var(--text2); border-color: var(--border2); }
+
+/* Timer setup inputs */
+.timer-setup { display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 24px; }
+.time-input-group { display: flex; align-items: center; gap: 4px; }
+.time-input {
+  width: 56px; text-align: center; font-family: var(--mono); font-size: 28px;
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  color: var(--text); border-radius: var(--radius-sm);
+  padding: 6px 4px; outline: none;
+  -moz-appearance: textfield;
+}
+.time-input::-webkit-outer-spin-button,
+.time-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.time-input:focus { border-color: var(--accent); color: var(--accent); }
+.time-sep { font-family: var(--mono); font-size: 24px; color: var(--text3); }
+.interval-setup { display: flex; gap: 12px; justify-content: center; align-items: center; flex-wrap: wrap; }
+.interval-field { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.interval-field label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; }
+.interval-input {
+  width: 64px; text-align: center; font-family: var(--mono); font-size: 22px;
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  color: var(--text); border-radius: var(--radius-sm);
+  padding: 6px 4px; outline: none;
+  -moz-appearance: textfield;
+}
+.interval-input::-webkit-outer-spin-button,
+.interval-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+.interval-input:focus { border-color: var(--accent); }
+.interval-x { font-size: 18px; color: var(--text3); margin-top: 16px; }
+
+/* Alarm setup */
+.alarm-setup { display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 24px; }
+.alarm-time-input {
+  font-family: var(--mono); font-size: 28px; text-align: center;
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  color: var(--text); border-radius: var(--radius-sm);
+  padding: 6px 12px; outline: none;
+}
+.alarm-time-input:focus { border-color: var(--accent); }
+.repeat-select {
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  color: var(--text2); border-radius: var(--radius-sm);
+  padding: 8px 12px; font-size: 13px; font-family: var(--sans);
+  outline: none; cursor: pointer;
+}
+.repeat-select:focus { border-color: var(--accent); }
+
+/* Memo + Records */
+.bottom-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 16px 24px; gap: 14px; }
+
+.memo-box {
+  flex-shrink: 0;
+  background: var(--bg2);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color .2s;
+}
+.memo-box:focus-within { border-color: rgba(200,240,96,0.3); }
+.memo-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 12px;
+  border-bottom: 0.5px solid var(--border);
+}
+.memo-label { font-size: 11px; color: var(--text3); letter-spacing: .06em; text-transform: uppercase; }
+.char-count { font-size: 11px; font-family: var(--mono); color: var(--text3); }
+.char-count.warn { color: var(--orange); }
+.memo-tags { display: flex; gap: 6px; padding: 8px 10px; border-bottom: 0.5px solid var(--border); flex-wrap: wrap; align-items: center; }
+.tag-chip {
+  padding: 3px 10px; border-radius: 20px;
+  border: 0.5px solid var(--border2); color: var(--text3);
+  font-size: 11px; cursor: pointer; transition: all .15s;
+}
+.tag-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+.tag-add { padding: 3px 10px; border-radius: 20px; border: 0.5px dashed var(--border); color: var(--text3); font-size: 11px; cursor: pointer; }
+.tag-add:hover { border-color: var(--border2); color: var(--text2); }
+.memo-input-row { display: flex; align-items: flex-end; gap: 8px; padding: 8px; }
+.memo-textarea {
+  flex: 1; background: transparent; border: none; outline: none;
+  color: var(--text); font-size: 13px; font-family: var(--sans);
+  resize: none; min-height: 44px; max-height: 80px;
+  line-height: 1.6; padding: 4px;
+}
+.memo-textarea::placeholder { color: var(--text3); }
+.memo-save-btn {
+  flex-shrink: 0; padding: 7px 16px; border-radius: var(--radius-sm);
+  background: var(--accent); color: var(--bg);
+  border: none; font-size: 12px; font-weight: 500; font-family: var(--sans);
+  cursor: pointer; transition: all .15s;
+  align-self: flex-end;
+}
+.memo-save-btn:hover { background: var(--accent2); }
+.memo-save-btn:disabled { background: var(--bg3); color: var(--text3); cursor: default; }
+
+/* Records */
+.records-area { flex: 1; overflow-y: auto; }
+.records-area::-webkit-scrollbar { width: 4px; }
+.records-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.records-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.records-title { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; }
+.records-count { font-size: 11px; font-family: var(--mono); color: var(--text3); }
+.record-item {
+  display: flex; gap: 10px; padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg2); border: 0.5px solid var(--border);
+  margin-bottom: 6px; group: true;
+  transition: border-color .15s;
+  position: relative;
+}
+.record-item:hover { border-color: var(--border2); }
+.record-times { flex-shrink: 0; display: flex; flex-direction: column; gap: 2px; }
+.record-clock { font-size: 11px; font-family: var(--mono); color: var(--text3); }
+.record-elapsed { font-size: 11px; font-family: var(--mono); color: var(--blue); }
+.record-round { font-size: 10px; color: var(--text3); }
+.record-body { flex: 1; min-width: 0; }
+.record-text { font-size: 13px; color: var(--text); line-height: 1.5; word-break: break-word; }
+.record-tag { font-size: 11px; color: var(--accent); margin-top: 3px; }
+.record-actions {
+  display: flex; gap: 4px; flex-shrink: 0;
+  opacity: 0; transition: opacity .15s;
+}
+.record-item:hover .record-actions { opacity: 1; }
+.rec-btn {
+  padding: 3px 8px; border-radius: 4px;
+  border: 0.5px solid var(--border2); background: var(--bg3);
+  color: var(--text3); font-size: 11px; cursor: pointer;
+  font-family: var(--sans);
+}
+.rec-btn:hover { color: var(--text); border-color: var(--border); }
+.rec-btn.del:hover { color: var(--red); border-color: rgba(255,107,107,0.3); }
+.empty-state { text-align: center; padding: 40px 0; color: var(--text3); font-size: 13px; }
+
+/* History view */
+.history-view { padding: 24px; overflow-y: auto; }
+.history-session {
+  background: var(--bg2); border: 0.5px solid var(--border);
+  border-radius: var(--radius); margin-bottom: 12px; overflow: hidden;
+}
+.history-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; cursor: pointer; border-bottom: 0.5px solid var(--border);
+}
+.history-name { font-size: 14px; font-weight: 500; }
+.history-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.history-actions { display: flex; gap: 6px; }
+.history-body { padding: 12px 16px; display: none; }
+.history-body.open { display: block; }
+.history-record {
+  display: flex; gap: 10px; padding: 7px 0;
+  border-bottom: 0.5px solid var(--border);
+  font-size: 12px;
+}
+.history-record:last-child { border-bottom: none; }
+
+/* Export modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.7);
+  display: none; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2); border: 0.5px solid var(--border2);
+  border-radius: 16px; padding: 24px; width: 380px;
+  max-width: 90vw;
+}
+.modal-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+.modal-sub { font-size: 12px; color: var(--text3); margin-bottom: 20px; }
+.modal-section { margin-bottom: 16px; }
+.modal-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px; }
+.radio-group { display: flex; flex-direction: column; gap: 6px; }
+.radio-option {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border); cursor: pointer;
+  transition: all .15s;
+}
+.radio-option:hover { border-color: var(--border2); }
+.radio-option.selected { border-color: var(--accent); background: var(--accent-dim); }
+.radio-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 1.5px solid var(--border2); flex-shrink: 0; transition: all .15s;
+}
+.radio-option.selected .radio-dot { border-color: var(--accent); background: var(--accent); box-shadow: inset 0 0 0 3px var(--bg2); }
+.radio-label { font-size: 13px; flex: 1; }
+.radio-sub { font-size: 11px; color: var(--text3); }
+.modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+.modal-btn {
+  flex: 1; padding: 10px; border-radius: var(--radius-sm);
+  font-size: 13px; font-weight: 500; font-family: var(--sans);
+  cursor: pointer; transition: all .15s; border: none;
+}
+.modal-btn.cancel { background: var(--bg3); color: var(--text2); }
+.modal-btn.cancel:hover { background: var(--border); }
+.modal-btn.confirm { background: var(--accent); color: var(--bg); }
+.modal-btn.confirm:hover { background: var(--accent2); }
+
+/* Move memo modal */
+.move-session-list { max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.move-session-item {
+  padding: 8px 12px; border-radius: var(--radius-sm);
+  border: 0.5px solid var(--border); cursor: pointer; transition: all .15s;
+}
+.move-session-item:hover { border-color: var(--border2); background: var(--bg3); }
+.move-session-item.selected { border-color: var(--accent); background: var(--accent-dim); }
+
+/* Tag manager modal */
+.tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.tag-manage-chip {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 20px;
+  border: 0.5px solid var(--border2); color: var(--text2);
+  font-size: 12px;
+}
+.tag-del-btn { color: var(--text3); cursor: pointer; font-size: 14px; line-height: 1; }
+.tag-del-btn:hover { color: var(--red); }
+.tag-add-row { display: flex; gap: 8px; }
+.tag-add-input {
+  flex: 1; background: var(--bg3); border: 0.5px solid var(--border2);
+  color: var(--text); border-radius: var(--radius-sm);
+  padding: 7px 10px; font-size: 13px; font-family: var(--sans); outline: none;
+}
+.tag-add-input:focus { border-color: var(--accent); }
+.tag-add-confirm {
+  padding: 7px 14px; border-radius: var(--radius-sm);
+  background: var(--accent); color: var(--bg);
+  border: none; font-size: 12px; font-family: var(--sans); cursor: pointer;
+}
+
+/* Session name modal */
+.text-input-modal {
+  width: 100%; background: var(--bg3); border: 0.5px solid var(--border2);
+  color: var(--text); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 14px; font-family: var(--sans); outline: none;
+  margin-bottom: 16px;
+}
+.text-input-modal:focus { border-color: var(--accent); }
+
+/* Range picker for export */
+.date-range { display: flex; gap: 8px; align-items: center; }
+.date-input {
+  flex: 1; background: var(--bg3); border: 0.5px solid var(--border2);
+  color: var(--text); border-radius: var(--radius-sm);
+  padding: 7px 10px; font-size: 12px; font-family: var(--mono); outline: none;
+  color-scheme: dark;
+}
+.date-input:focus { border-color: var(--accent); }
+
+/* Toast */
+.toast {
+  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: var(--bg3); border: 0.5px solid var(--border2);
+  color: var(--text); padding: 10px 20px; border-radius: 20px;
+  font-size: 13px; opacity: 0; transition: all .25s;
+  pointer-events: none; z-index: 200; white-space: nowrap;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .sidebar { width: 56px; }
+  .logo-text, .logo-sub, .nav-item span, .session-list, .sidebar-bottom { display: none; }
+  .nav-item { justify-content: center; padding: 10px; }
+  .timer-big { font-size: 56px; }
+  .app { flex-direction: column; }
+  .sidebar { width: 100%; height: 52px; flex-direction: row; align-items: center; padding: 0 12px; border-right: none; border-bottom: 0.5px solid var(--border); }
+  .logo { padding: 0 12px 0 0; border-bottom: none; border-right: 0.5px solid var(--border); margin-bottom: 0; }
+  .nav-section { display: flex; flex-direction: row; gap: 4px; padding: 0 8px; margin-bottom: 0; }
+  .nav-label { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-text">Focus</div>
+      <div class="logo-sub">Timer</div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">메뉴</div>
+      <div class="nav-item active" onclick="showView('timer')" id="nav-timer">
+        <span class="nav-icon">⏱</span><span>타이머</span>
+      </div>
+      <div class="nav-item" onclick="showView('history')" id="nav-history">
+        <span class="nav-icon">📋</span><span>기록</span>
+      </div>
+    </div>
+    <div class="nav-label" style="padding: 0 20px; margin-bottom: 8px;">세션</div>
+    <div class="session-list" id="session-list"></div>
+    <div class="sidebar-bottom">
+      <button class="new-session-btn" onclick="newSession()">+ 새 세션</button>
+    </div>
+  </div>
+
+  <!-- Timer View -->
+  <div class="view active" id="view-timer">
+    <div class="top-bar">
+      <input class="session-title-edit" id="session-title" value="새 세션" onchange="updateSessionName(this.value)" onblur="updateSessionName(this.value)">
+      <div class="top-actions">
+        <button class="top-btn" onclick="openTagModal()">태그 관리</button>
+        <button class="top-btn primary" onclick="openExportModal()">내보내기</button>
+      </div>
+    </div>
+
+    <div class="timer-area">
+      <div class="mode-tabs">
+        <div class="mode-tab active" onclick="setMode('countdown')" id="tab-countdown">카운트다운</div>
+        <div class="mode-tab" onclick="setMode('countup')" id="tab-countup">카운트업</div>
+        <div class="mode-tab" onclick="setMode('interval')" id="tab-interval">인터벌</div>
+        <div class="mode-tab" onclick="setMode('alarm')" id="tab-alarm">알람</div>
+      </div>
+
+      <!-- Countdown setup -->
+      <div id="setup-countdown">
+        <div class="timer-setup">
+          <div class="time-input-group">
+            <input class="time-input" type="number" id="cd-h" value="0" min="0" max="99" oninput="clampInput(this,0,99)">
+            <span class="time-sep">:</span>
+            <input class="time-input" type="number" id="cd-m" value="25" min="0" max="59" oninput="clampInput(this,0,59)">
+            <span class="time-sep">:</span>
+            <input class="time-input" type="number" id="cd-s" value="0" min="0" max="59" oninput="clampInput(this,0,59)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Interval setup -->
+      <div id="setup-interval" style="display:none">
+        <div class="interval-setup">
+          <div class="interval-field">
+            <label>분</label>
+            <input class="interval-input" type="number" id="iv-min" value="15" min="1" max="99" oninput="clampInput(this,1,99)">
+          </div>
+          <span class="interval-x">×</span>
+          <div class="interval-field">
+            <label>횟수</label>
+            <input class="interval-input" type="number" id="iv-rep" value="10" min="1" max="99" oninput="clampInput(this,1,99)">
+          </div>
+        </div>
+      </div>
+
+      <!-- Alarm setup -->
+      <div id="setup-alarm" style="display:none">
+        <div class="alarm-setup">
+          <select class="repeat-select" id="alarm-ampm" style="font-family:var(--mono);font-size:22px;padding:6px 10px">
+            <option value="AM">오전</option>
+            <option value="PM">오후</option>
+          </select>
+          <input class="time-input" type="number" id="alarm-h" value="9" min="1" max="12" oninput="clampInput(this,1,12)" style="font-size:28px">
+          <span class="time-sep">:</span>
+          <input class="time-input" type="number" id="alarm-m" value="0" min="0" max="59" oninput="clampInput(this,0,59)" style="font-size:28px">
+          <select class="repeat-select" id="alarm-repeat">
+            <option value="once">1회</option>
+            <option value="daily">매일</option>
+            <option value="weekday">평일</option>
+            <option value="weekend">주말</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Interval dots -->
+      <div class="interval-dots" id="interval-dots" style="display:none"></div>
+
+      <!-- Timer display -->
+      <div class="timer-display-wrap">
+        <div class="timer-big" id="timer-display">25:00</div>
+        <div class="timer-context" id="timer-context"></div>
+      </div>
+
+      <!-- Controls -->
+      <div class="timer-controls" id="timer-controls">
+        <button class="ctrl-btn reset" onclick="resetTimer()" id="btn-reset" style="display:none">리셋</button>
+        <button class="ctrl-btn start" onclick="startTimer()" id="btn-start">시작</button>
+        <button class="ctrl-btn pause" onclick="pauseTimer()" id="btn-pause" style="display:none">일시정지</button>
+        <button class="ctrl-btn skip" onclick="skipInterval()" id="btn-skip" style="display:none">건너뛰기</button>
+      </div>
+    </div>
+
+    <!-- Memo + Records -->
+    <div class="bottom-area">
+      <div class="memo-box">
+        <div class="memo-header">
+          <span class="memo-label">활동 메모</span>
+          <span class="char-count" id="char-count">0 / 200</span>
+        </div>
+        <div class="memo-tags" id="memo-tags"></div>
+        <div class="memo-input-row">
+          <textarea class="memo-textarea" id="memo-input" placeholder="지금 무엇을 하고 있나요? (Enter로 저장)" maxlength="200" rows="2"
+            oninput="updateCharCount()"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();saveMemo()}"
+          ></textarea>
+          <button class="memo-save-btn" id="memo-save-btn" onclick="saveMemo()">저장</button>
+        </div>
+      </div>
+
+      <div class="records-area">
+        <div class="records-header">
+          <span class="records-title">이번 세션 기록</span>
+          <span class="records-count" id="records-count">0개</span>
+        </div>
+        <div id="records-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History View -->
+  <div class="view" id="view-history">
+    <div class="top-bar">
+      <span style="font-size:15px;font-weight:500">전체 기록</span>
+      <div class="top-actions">
+        <button class="top-btn primary" onclick="openExportModal()">내보내기</button>
+      </div>
+    </div>
+    <div class="history-view" id="history-list"></div>
+  </div>
+
+</div>
+
+<!-- Export Modal -->
+<div class="modal-overlay" id="modal-export">
+  <div class="modal">
+    <div class="modal-title">기록 내보내기</div>
+    <div class="modal-sub">형식과 범위를 선택하세요</div>
+    <div class="modal-section">
+      <div class="modal-label">형식</div>
+      <div class="radio-group">
+        <div class="radio-option selected" onclick="selectExportFmt('csv')" id="fmt-csv">
+          <div class="radio-dot"></div>
+          <div><div class="radio-label">CSV (.csv)</div><div class="radio-sub">범용 형식 · Excel에서 열림</div></div>
+        </div>
+        <div class="radio-option" onclick="selectExportFmt('xlsx')" id="fmt-xlsx">
+          <div class="radio-dot"></div>
+          <div><div class="radio-label">Excel (.xlsx)</div><div class="radio-sub">서식 포함 · 열 너비 자동</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-section">
+      <div class="modal-label">범위</div>
+      <div class="radio-group">
+        <div class="radio-option selected" onclick="selectExportRange('current')" id="range-current">
+          <div class="radio-dot"></div>
+          <div class="radio-label">현재 세션</div>
+        </div>
+        <div class="radio-option" onclick="selectExportRange('all')" id="range-all">
+          <div class="radio-dot"></div>
+          <div class="radio-label">전체 세션</div>
+        </div>
+        <div class="radio-option" onclick="selectExportRange('date')" id="range-date">
+          <div class="radio-dot"></div>
+          <div><div class="radio-label">날짜 범위</div>
+          <div style="margin-top:6px;display:none" id="date-range-inputs">
+            <div class="date-range">
+              <input class="date-input" type="date" id="export-from">
+              <span style="color:var(--text3)">~</span>
+              <input class="date-input" type="date" id="export-to">
+            </div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal('modal-export')">취소</button>
+      <button class="modal-btn confirm" onclick="doExport()">다운로드</button>
+    </div>
+  </div>
+</div>
+
+<!-- Move Memo Modal -->
+<div class="modal-overlay" id="modal-move">
+  <div class="modal">
+    <div class="modal-title">메모 이동 / 복사</div>
+    <div class="modal-sub" id="move-memo-preview" style="font-style:italic;color:var(--text2)"></div>
+    <div class="modal-section">
+      <div class="modal-label">대상 세션 선택</div>
+      <div class="move-session-list" id="move-session-list"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn cancel" onclick="closeModal('modal-move')">취소</button>
+      <button class="modal-btn cancel" onclick="doMoveOrCopy('copy')">복사</button>
+      <button class="modal-btn confirm" onclick="doMoveOrCopy('move')">이동</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tag Manager Modal -->
+<div class="modal-overlay" id="modal-tags">
+  <div class="modal">
+    <div class="modal-title">태그 관리</div>
+    <div class="modal-sub">자주 쓰는 태그를 등록하세요</div>
+    <div class="tag-list" id="tag-manage-list"></div>
+    <div class="tag-add-row">
+      <input class="tag-add-input" id="tag-add-input" placeholder="#새태그" maxlength="20"
+        onkeydown="if(event.key==='Enter')addTag()">
+      <button class="tag-add-confirm" onclick="addTag()">추가</button>
+    </div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="modal-btn confirm" onclick="closeModal('modal-tags');renderTags()">완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── State ──────────────────────────────────────────────
+let state = {
+  sessions: [],
+  currentSessionId: null,
+  tags: ['#집중', '#휴식', '#리뷰', '#회의'],
+  exportFmt: 'csv',
+  exportRange: 'current',
+  movingRecord: null,
+  moveTargetSessionId: null,
+};
+
+let timer = {
+  mode: 'countdown',
+  interval: null,
+  running: false,
+  seconds: 0,       // remaining or elapsed
+  totalSeconds: 0,  // for countdown
+  ivRound: 0,       // current interval round (0-indexed)
+  ivTotal: 0,
+  ivMinutes: 15,
+  alarmTime: null,
+  alarmInterval: null,
+};
+
+// ── Persistence ────────────────────────────────────────
+function save() {
+  localStorage.setItem('focus_timer_state', JSON.stringify({
+    sessions: state.sessions,
+    currentSessionId: state.currentSessionId,
+    tags: state.tags,
+  }));
+}
+
+function load() {
+  const raw = localStorage.getItem('focus_timer_state');
+  if (raw) {
+    try {
+      const d = JSON.parse(raw);
+      state.sessions = d.sessions || [];
+      state.currentSessionId = d.currentSessionId || null;
+      state.tags = d.tags || ['#집중', '#휴식', '#리뷰', '#회의'];
+    } catch(e) {}
+  }
+  if (!state.sessions.length) newSession(true);
+  else if (!state.currentSessionId) state.currentSessionId = state.sessions[0].id;
+}
+
+// ── Session helpers ────────────────────────────────────
+function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+function getCurrentSession() {
+  return state.sessions.find(s => s.id === state.currentSessionId);
+}
+
+function newSession(silent) {
+  const id = genId();
+  const num = state.sessions.length + 1;
+  state.sessions.unshift({
+    id, name: `세션 #${num}`,
+    createdAt: new Date().toISOString(),
+    records: [],
+  });
+  state.currentSessionId = id;
+  save();
+  renderSidebar();
+  renderRecords();
+  document.getElementById('session-title').value = getCurrentSession().name;
+  if (!silent) showToast('새 세션이 시작됐습니다');
+}
+
+function updateSessionName(name) {
+  const s = getCurrentSession();
+  if (s) { s.name = name || s.name; save(); renderSidebar(); }
+}
+
+function switchSession(id) {
+  state.currentSessionId = id;
+  save();
+  const s = getCurrentSession();
+  document.getElementById('session-title').value = s.name;
+  renderSidebar();
+  renderRecords();
+  showView('timer');
+}
+
+// ── Timer logic ────────────────────────────────────────
+function setMode(mode) {
+  if (timer.running) resetTimer();
+  timer.mode = mode;
+  ['countdown','countup','interval','alarm'].forEach(m => {
+    document.getElementById(`tab-${m}`).classList.toggle('active', m === mode);
+    const setup = document.getElementById(`setup-${m}`);
+    if (setup) setup.style.display = (m === mode) ? '' : 'none';
+  });
+  document.getElementById('setup-countdown').style.display = mode === 'countdown' ? '' : 'none';
+  document.getElementById('interval-dots').style.display = mode === 'interval' ? 'flex' : 'none';
+  document.getElementById('btn-skip').style.display = 'none';
+  updateTimerDisplay();
+  renderIntervalDots();
+}
+
+function getTotalSeconds() {
+  if (timer.mode === 'countdown') {
+    const h = parseInt(document.getElementById('cd-h').value)||0;
+    const m = parseInt(document.getElementById('cd-m').value)||0;
+    const s = parseInt(document.getElementById('cd-s').value)||0;
+    return h*3600 + m*60 + s;
+  }
+  if (timer.mode === 'interval') {
+    return (parseInt(document.getElementById('iv-min').value)||15) * 60;
+  }
+  return 0;
+}
+
+function startTimer() {
+  if (timer.mode === 'alarm') { startAlarm(); return; }
+  if (!timer.running) {
+    if (timer.mode === 'interval' && !timer.interval) {
+      timer.ivTotal = parseInt(document.getElementById('iv-rep').value)||10;
+      timer.ivMinutes = parseInt(document.getElementById('iv-min').value)||15;
+      timer.ivRound = 0;
+      timer.seconds = timer.ivMinutes * 60;
+      timer.totalSeconds = timer.seconds;
+      renderIntervalDots();
+    } else if (!timer.interval) {
+      timer.totalSeconds = getTotalSeconds();
+      timer.seconds = timer.mode === 'countup' ? 0 : timer.totalSeconds;
+      if (timer.mode === 'countdown' && timer.seconds === 0) { showToast('시간을 설정해주세요'); return; }
+    }
+    timer.running = true;
+    timer.interval = setInterval(tick, 1000);
+    document.getElementById('btn-start').style.display = 'none';
+    document.getElementById('btn-pause').style.display = '';
+    document.getElementById('btn-reset').style.display = '';
+    if (timer.mode === 'interval') document.getElementById('btn-skip').style.display = '';
+    disableSetupInputs(true);
+  }
+}
+
+function pauseTimer() {
+  timer.running = false;
+  clearInterval(timer.interval);
+  timer.interval = null; // keep state so resume works
+  document.getElementById('btn-start').textContent = '재개';
+  document.getElementById('btn-start').style.display = '';
+  document.getElementById('btn-pause').style.display = 'none';
+  // re-set interval ref so we can resume
+  timer._paused = true;
+}
+
+function resetTimer() {
+  timer.running = false;
+  clearInterval(timer.interval);
+  timer.interval = null;
+  timer._paused = false;
+  timer.seconds = 0;
+  timer.ivRound = 0;
+  document.getElementById('btn-start').textContent = '시작';
+  document.getElementById('btn-start').style.display = '';
+  document.getElementById('btn-pause').style.display = 'none';
+  document.getElementById('btn-reset').style.display = 'none';
+  document.getElementById('btn-skip').style.display = 'none';
+  document.getElementById('timer-display').classList.remove('running','finished');
+  document.getElementById('timer-context').textContent = '';
+  disableSetupInputs(false);
+  updateTimerDisplay();
+  renderIntervalDots();
+}
+
+function tick() {
+  if (timer.mode === 'countup') {
+    timer.seconds++;
+    updateTimerDisplay();
+  } else if (timer.mode === 'countdown') {
+    timer.seconds--;
+    updateTimerDisplay();
+    if (timer.seconds <= 0) { timerFinished(); }
+  } else if (timer.mode === 'interval') {
+    timer.seconds--;
+    updateTimerDisplay();
+    if (timer.seconds <= 0) {
+      timer.ivRound++;
+      renderIntervalDots();
+      if (timer.ivRound >= timer.ivTotal) {
+        timerFinished();
+      } else {
+        timer.seconds = timer.ivMinutes * 60;
+        timer.totalSeconds = timer.seconds;
+        playBeep();
+        showToast(`${timer.ivRound}회차 완료! ${timer.ivRound+1}회차 시작`);
+      }
+    }
+  }
+}
+
+function skipInterval() {
+  if (timer.mode !== 'interval') return;
+  timer.ivRound++;
+  renderIntervalDots();
+  if (timer.ivRound >= timer.ivTotal) { timerFinished(); return; }
+  timer.seconds = timer.ivMinutes * 60;
+  timer.totalSeconds = timer.seconds;
+  showToast(`${timer.ivRound}회차로 건너뜁니다`);
+}
+
+function timerFinished() {
+  clearInterval(timer.interval);
+  timer.interval = null;
+  timer.running = false;
+  timer._paused = false;
+  document.getElementById('timer-display').classList.remove('running');
+  document.getElementById('timer-display').classList.add('finished');
+  document.getElementById('btn-pause').style.display = 'none';
+  document.getElementById('btn-start').textContent = '다시 시작';
+  document.getElementById('btn-start').style.display = '';
+  document.getElementById('btn-skip').style.display = 'none';
+  document.getElementById('timer-context').textContent = '완료!';
+  playBeep(true);
+  showToast('타이머 완료! 🎉');
+  disableSetupInputs(false);
+}
+
+function startAlarm() {
+  const ampm = document.getElementById('alarm-ampm').value;
+  let h = parseInt(document.getElementById('alarm-h').value) || 12;
+  const m = parseInt(document.getElementById('alarm-m').value) || 0;
+  // convert to 24h
+  let h24 = h;
+  if (ampm === 'AM' && h === 12) h24 = 0;
+  else if (ampm === 'PM' && h !== 12) h24 = h + 12;
+  const targetStr = `${String(h24).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  const displayStr = `${ampm} ${h}:${String(m).padStart(2,'0')}`;
+  clearInterval(timer.alarmInterval);
+  timer.alarmInterval = setInterval(() => {
+    const now = new Date();
+    const cur = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+    if (cur === targetStr) {
+      playBeep(true);
+      showToast(`알람: ${displayStr} ⏰`);
+      if (Notification.permission === 'granted') {
+        new Notification('Focus Timer', { body: `알람 시각: ${displayStr}` });
+      }
+      const repeat = document.getElementById('alarm-repeat').value;
+      if (repeat === 'once') clearInterval(timer.alarmInterval);
+    }
+  }, 10000);
+  Notification.requestPermission();
+  showToast(`알람 설정: ${displayStr}`);
+  document.getElementById('btn-start').style.display = 'none';
+  document.getElementById('btn-reset').style.display = '';
+  document.getElementById('btn-reset').onclick = () => {
+    clearInterval(timer.alarmInterval);
+    document.getElementById('btn-start').style.display = '';
+    document.getElementById('btn-reset').style.display = 'none';
+    document.getElementById('btn-reset').onclick = resetTimer;
+    showToast('알람 취소됨');
+  };
+}
+
+function updateTimerDisplay() {
+  const el = document.getElementById('timer-display');
+  const ctx = document.getElementById('timer-context');
+  let secs = timer.seconds;
+  if (timer.mode === 'countdown' && !timer.running && !timer._paused) secs = getTotalSeconds();
+  if (timer.mode === 'interval' && !timer.running && !timer._paused) secs = (parseInt(document.getElementById('iv-min').value)||15)*60;
+  const h = Math.floor(Math.abs(secs)/3600);
+  const m = Math.floor((Math.abs(secs)%3600)/60);
+  const s = Math.abs(secs)%60;
+  const pad = n => String(n).padStart(2,'0');
+  el.textContent = h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  el.classList.toggle('running', timer.running);
+  if (timer.mode === 'interval' && timer.running) {
+    ctx.textContent = `${timer.ivRound+1}회차 / 총 ${timer.ivTotal}회`;
+  }
+}
+
+function renderIntervalDots() {
+  const el = document.getElementById('interval-dots');
+  if (timer.mode !== 'interval') { el.style.display = 'none'; return; }
+  const total = timer.running || timer._paused ? timer.ivTotal : (parseInt(document.getElementById('iv-rep').value)||10);
+  el.style.display = 'flex';
+  el.innerHTML = Array.from({length: total}, (_,i) => {
+    let cls = 'todo';
+    if (i < timer.ivRound) cls = 'done';
+    else if (i === timer.ivRound && timer.running) cls = 'active';
+    return `<div class="dot ${cls}">${i+1}</div>`;
+  }).join('');
+}
+
+function disableSetupInputs(disabled) {
+  ['cd-h','cd-m','cd-s','iv-min','iv-rep','alarm-ampm','alarm-h','alarm-m','alarm-repeat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = disabled;
+  });
+}
+
+function clampInput(el, min, max) {
+  let v = parseInt(el.value);
+  if (isNaN(v)) v = min;
+  el.value = Math.min(max, Math.max(min, v));
+  if (!timer.running && !timer._paused) updateTimerDisplay();
+  if (timer.mode === 'interval') renderIntervalDots();
+}
+
+// ── Memo ───────────────────────────────────────────────
+let pendingTag = '';
+
+function updateCharCount() {
+  const val = document.getElementById('memo-input').value;
+  const el = document.getElementById('char-count');
+  el.textContent = `${val.length} / 200`;
+  el.classList.toggle('warn', val.length >= 180);
+}
+
+function saveMemo() {
+  const input = document.getElementById('memo-input');
+  const text = input.value.trim();
+  if (!text) return;
+  const s = getCurrentSession();
+  if (!s) return;
+  const now = new Date();
+  const elapsed = timer.running
+    ? (timer.mode === 'countup' ? timer.seconds : timer.totalSeconds - timer.seconds)
+    : null;
+
+  s.records.push({
+    id: genId(),
+    text,
+    tag: pendingTag,
+    time: now.toISOString(),
+    elapsed,
+    round: timer.mode === 'interval' && timer.running ? timer.ivRound + 1 : null,
+  });
+  pendingTag = '';
+  input.value = '';
+  updateCharCount();
+  save();
+  renderRecords();
+  showToast('기록 저장됨');
+}
+
+function renderTags() {
+  const el = document.getElementById('memo-tags');
+  el.innerHTML = state.tags.map(t =>
+    `<span class="tag-chip" onclick="selectTag('${t}')" id="tag-${t.replace('#','')}">${t}</span>`
+  ).join('') + `<span class="tag-add" onclick="openTagModal()">+ 태그</span>`;
+}
+
+function selectTag(tag) {
+  pendingTag = pendingTag === tag ? '' : tag;
+  renderTags();
+  if (pendingTag) {
+    const chip = document.getElementById(`tag-${pendingTag.replace('#','')}`);
+    if (chip) { chip.style.background = 'var(--accent-dim)'; chip.style.color = 'var(--accent)'; chip.style.borderColor = 'var(--accent)'; }
+  }
+  const input = document.getElementById('memo-input');
+  const current = input.value;
+  // remove old tag from input if present
+  const cleaned = current.replace(/#\S+/g, '').trim();
+  input.value = pendingTag ? cleaned + (cleaned ? ' ' : '') + pendingTag + ' ' : cleaned;
+  updateCharCount();
+  input.focus();
+}
+
+// ── Records render ─────────────────────────────────────
+function renderRecords() {
+  const s = getCurrentSession();
+  const el = document.getElementById('records-list');
+  const countEl = document.getElementById('records-count');
+  if (!s || !s.records.length) {
+    el.innerHTML = `<div class="empty-state">아직 기록이 없어요<br>타이머를 시작하고 활동을 메모해보세요</div>`;
+    countEl.textContent = '0개';
+    return;
+  }
+  countEl.textContent = `${s.records.length}개`;
+  el.innerHTML = [...s.records].reverse().map(r => {
+    const d = new Date(r.time);
+    const clock = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+    const elapsed = r.elapsed != null ? fmtElapsed(r.elapsed) : '—';
+    return `<div class="record-item" id="rec-${r.id}">
+      <div class="record-times">
+        <div class="record-clock">${clock}</div>
+        <div class="record-elapsed">${elapsed}</div>
+        ${r.round ? `<div class="record-round">${r.round}회차</div>` : ''}
+      </div>
+      <div class="record-body">
+        <div class="record-text">${escHtml(r.text)}</div>
+        ${r.tag ? `<div class="record-tag">${escHtml(r.tag)}</div>` : ''}
+      </div>
+      <div class="record-actions">
+        <button class="rec-btn" onclick="openMoveModal('${r.id}')">이동</button>
+        <button class="rec-btn del" onclick="deleteRecord('${r.id}')">삭제</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteRecord(id) {
+  const s = getCurrentSession();
+  s.records = s.records.filter(r => r.id !== id);
+  save(); renderRecords();
+}
+
+function fmtElapsed(secs) {
+  const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60;
+  const p = n => String(n).padStart(2,'0');
+  return h > 0 ? `${p(h)}:${p(m)}:${p(s)}` : `${p(m)}:${p(s)}`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Move Modal ─────────────────────────────────────────
+function openMoveModal(recordId) {
+  state.movingRecord = recordId;
+  state.moveTargetSessionId = null;
+  const s = getCurrentSession();
+  const rec = s.records.find(r => r.id === recordId);
+  document.getElementById('move-memo-preview').textContent = `"${rec.text.slice(0,50)}${rec.text.length>50?'…':''}"`;
+  const list = document.getElementById('move-session-list');
+  list.innerHTML = state.sessions.filter(ss => ss.id !== state.currentSessionId).map(ss =>
+    `<div class="move-session-item" onclick="selectMoveTarget('${ss.id}',this)">
+      <div style="font-size:13px">${escHtml(ss.name)}</div>
+      <div style="font-size:11px;color:var(--text3)">${ss.records.length}개 기록 · ${ss.createdAt.slice(0,10)}</div>
+    </div>`
+  ).join('') || '<div style="color:var(--text3);font-size:12px;padding:8px">다른 세션이 없습니다</div>';
+  document.getElementById('modal-move').classList.add('open');
+}
+
+function selectMoveTarget(id, el) {
+  state.moveTargetSessionId = id;
+  document.querySelectorAll('.move-session-item').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function doMoveOrCopy(action) {
+  if (!state.moveTargetSessionId) { showToast('대상 세션을 선택해주세요'); return; }
+  const src = getCurrentSession();
+  const dst = state.sessions.find(s => s.id === state.moveTargetSessionId);
+  const rec = src.records.find(r => r.id === state.movingRecord);
+  if (!rec || !dst) return;
+  dst.records.push({...rec, id: genId()});
+  if (action === 'move') src.records = src.records.filter(r => r.id !== state.movingRecord);
+  save(); renderRecords();
+  closeModal('modal-move');
+  showToast(action === 'move' ? '메모를 이동했습니다' : '메모를 복사했습니다');
+}
+
+// ── Tag Modal ──────────────────────────────────────────
+function openTagModal() {
+  renderTagManageList();
+  document.getElementById('modal-tags').classList.add('open');
+}
+
+function renderTagManageList() {
+  document.getElementById('tag-manage-list').innerHTML = state.tags.map(t =>
+    `<div class="tag-manage-chip">${escHtml(t)}<span class="tag-del-btn" onclick="removeTag('${t}')">×</span></div>`
+  ).join('');
+}
+
+function removeTag(tag) {
+  state.tags = state.tags.filter(t => t !== tag);
+  save(); renderTagManageList();
+}
+
+function addTag() {
+  let v = document.getElementById('tag-add-input').value.trim();
+  if (!v) return;
+  if (!v.startsWith('#')) v = '#' + v;
+  if (!state.tags.includes(v)) { state.tags.push(v); save(); }
+  document.getElementById('tag-add-input').value = '';
+  renderTagManageList();
+}
+
+// ── Export ─────────────────────────────────────────────
+function openExportModal() {
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('export-to').value = today;
+  document.getElementById('export-from').value = today;
+  document.getElementById('modal-export').classList.add('open');
+}
+
+function selectExportFmt(fmt) {
+  state.exportFmt = fmt;
+  ['csv','xlsx'].forEach(f => document.getElementById(`fmt-${f}`).classList.toggle('selected', f===fmt));
+}
+
+function selectExportRange(range) {
+  state.exportRange = range;
+  ['current','all','date'].forEach(r => document.getElementById(`range-${r}`).classList.toggle('selected', r===range));
+  document.getElementById('date-range-inputs').style.display = range === 'date' ? '' : 'none';
+}
+
+function getExportRecords() {
+  let sessions = [];
+  if (state.exportRange === 'current') sessions = [getCurrentSession()].filter(Boolean);
+  else if (state.exportRange === 'all') sessions = state.sessions;
+  else {
+    const from = new Date(document.getElementById('export-from').value);
+    const to = new Date(document.getElementById('export-to').value);
+    to.setHours(23,59,59);
+    sessions = state.sessions.filter(s => {
+      const d = new Date(s.createdAt);
+      return d >= from && d <= to;
+    });
+  }
+  const rows = [];
+  sessions.forEach(s => {
+    s.records.forEach(r => {
+      const d = new Date(r.time);
+      rows.push({
+        session_id: s.id.slice(0,8),
+        session_name: s.name,
+        date: d.toISOString().slice(0,10),
+        record_time: d.toTimeString().slice(0,8),
+        elapsed: r.elapsed != null ? fmtElapsed(r.elapsed) : '',
+        round: r.round || '',
+        tag: r.tag || '',
+        note: r.text,
+      });
+    });
+  });
+  return rows;
+}
+
+function doExport() {
+  const rows = getExportRecords();
+  if (!rows.length) { showToast('내보낼 기록이 없습니다'); return; }
+  if (state.exportFmt === 'csv') exportCSV(rows);
+  else exportXLSX(rows);
+  closeModal('modal-export');
+}
+
+function exportCSV(rows) {
+  const headers = ['session_id','session_name','date','record_time','elapsed','round','tag','note'];
+  const csv = [headers.join(','), ...rows.map(r =>
+    headers.map(h => `"${String(r[h]).replace(/"/g,'""')}"`).join(',')
+  )].join('\n');
+  const BOM = '\uFEFF';
+  download(BOM + csv, `focus_timer_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8');
+  showToast('CSV 다운로드 완료');
+}
+
+function exportXLSX(rows) {
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  script.onload = () => {
+    const headers = ['session_id','session_name','date','record_time','elapsed','round','tag','note'];
+    const wsData = [headers, ...rows.map(r => headers.map(h => r[h]))];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws['!cols'] = [8,20,12,12,10,6,12,40].map(w => ({wch:w}));
+    XLSX.utils.book_append_sheet(wb, ws, '기록');
+    XLSX.writeFile(wb, `focus_timer_${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast('Excel 다운로드 완료');
+  };
+  document.head.appendChild(script);
+}
+
+function download(content, filename, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], {type}));
+  a.download = filename;
+  a.click();
+}
+
+// ── History View ───────────────────────────────────────
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (!state.sessions.length) { el.innerHTML = '<div class="empty-state">세션이 없습니다</div>'; return; }
+  el.innerHTML = state.sessions.map(s => `
+    <div class="history-session">
+      <div class="history-header" onclick="toggleHistory('hist-${s.id}')">
+        <div>
+          <div class="history-name">${escHtml(s.name)}</div>
+          <div class="history-meta">${s.createdAt.slice(0,10)} · ${s.records.length}개 기록</div>
+        </div>
+        <div class="history-actions">
+          <button class="top-btn" onclick="event.stopPropagation();switchSession('${s.id}')">열기</button>
+        </div>
+      </div>
+      <div class="history-body" id="hist-${s.id}">
+        ${s.records.length ? s.records.map(r => {
+          const d = new Date(r.time);
+          const clock = d.toTimeString().slice(0,8);
+          return `<div class="history-record">
+            <div style="font-family:var(--mono);font-size:11px;color:var(--text3);min-width:60px">${clock}</div>
+            <div style="font-size:11px;color:var(--blue);font-family:var(--mono);min-width:48px">${r.elapsed!=null?fmtElapsed(r.elapsed):'—'}</div>
+            <div style="font-size:12px;flex:1">${escHtml(r.text)} ${r.tag?`<span style="color:var(--accent)">${escHtml(r.tag)}</span>`:''}</div>
+          </div>`;
+        }).join('') : '<div style="color:var(--text3);font-size:12px;padding:4px 0">기록 없음</div>'}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleHistory(id) {
+  const el = document.getElementById(id);
+  el.classList.toggle('open');
+}
+
+// ── Sidebar render ─────────────────────────────────────
+function renderSidebar() {
+  const el = document.getElementById('session-list');
+  el.innerHTML = state.sessions.map(s =>
+    `<div class="session-item ${s.id===state.currentSessionId?'active':''}" onclick="switchSession('${s.id}')">
+      <div class="session-name">${escHtml(s.name)}</div>
+      <div class="session-meta">${s.records.length}개 기록 · ${s.createdAt.slice(5,10)}</div>
+    </div>`
+  ).join('');
+}
+
+// ── View switching ─────────────────────────────────────
+function showView(v) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById(`view-${v}`).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.getElementById(`nav-${v}`)?.classList.add('active');
+  if (v === 'history') renderHistory();
+}
+
+// ── Modals ─────────────────────────────────────────────
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', e => { if (e.target === el) el.classList.remove('open'); });
+});
+
+// ── Toast ──────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+}
+
+// ── Beep ───────────────────────────────────────────────
+function playBeep(long) {
+  try {
+    const ctx = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.frequency.value = 880;
+    g.gain.setValueAtTime(0.3, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + (long ? 1.2 : 0.4));
+    o.start(); o.stop(ctx.currentTime + (long ? 1.2 : 0.4));
+  } catch(e) {}
+}
+
+// ── Init ───────────────────────────────────────────────
+load();
+renderSidebar();
+renderRecords();
+renderTags();
+updateTimerDisplay();
+
+// iv-rep change should update dots
+document.getElementById('iv-rep').addEventListener('input', renderIntervalDots);
+</script>
+</body>
+</html>
